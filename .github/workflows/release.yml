@@ -23,8 +23,8 @@ concurrency:
 
 env:
   PROGRAM: rewards_program
-  PROGRAM_ID: REWArDioXgQJ2fZKkfu9LCLjQfRwYWVVfsvcsR5hoXi
-  REPO_URL: https://github.com/solana-program/rewards
+  PROGRAM_ID: T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi
+  REPO_URL: https://github.com/sendaifun/merkle-rewards
 
 jobs:
   release:

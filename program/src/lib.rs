@@ -30,7 +30,7 @@ pub mod state;
 #[cfg(not(feature = "no-entrypoint"))]
 pub mod entrypoint;
 
-declare_id!("REWArDioXgQJ2fZKkfu9LCLjQfRwYWVVfsvcsR5hoXi");
+declare_id!("T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi");
 
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
@@ -38,8 +38,8 @@ use solana_security_txt::security_txt;
 #[cfg(not(feature = "no-entrypoint"))]
 security_txt! {
     name: "Rewards Program",
-    project_url: "https://github.com/solana-program/rewards",
-    contacts: "link:https://github.com/solana-program/rewards/security/advisories/new",
-    policy: "https://github.com/solana-program/rewards/security/policy",
-    source_code: "https://github.com/solana-program/rewards"
+    project_url: "https://github.com/sendaifun/merkle-rewards",
+    contacts: "link:https://github.com/sendaifun/merkle-rewards/security/advisories/new",
+    policy: "https://github.com/sendaifun/merkle-rewards/security/policy",
+    source_code: "https://github.com/sendaifun/merkle-rewards"
 }

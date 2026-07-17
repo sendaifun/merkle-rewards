@@ -101,13 +101,13 @@ check-program-metadata:
 
 # Deploy IDL to devnet
 deploy-idl-devnet: check-program-metadata
-    program-metadata write idl REWArDioXgQJ2fZKkfu9LCLjQfRwYWVVfsvcsR5hoXi idl/rewards_program.json \
+    program-metadata write idl T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi idl/rewards_program.json \
         --keypair .keypairs/rewards-devnet-deployer.json \
         --rpc https://api.devnet.solana.com
 
 # Deploy IDL to mainnet
 deploy-idl-mainnet: check-program-metadata
-    program-metadata write idl REWArDioXgQJ2fZKkfu9LCLjQfRwYWVVfsvcsR5hoXi idl/rewards_program.json \
+    program-metadata write idl T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi idl/rewards_program.json \
         --keypair .keypairs/rewards-mainnet-deployer.json \
         --rpc https://api.mainnet-beta.solana.com
 
@@ -124,8 +124,8 @@ check-solana-verify:
 # Note: Remote verification (--remote) only works on mainnet
 verify-mainnet: check-solana-verify
     solana-verify verify-from-repo \
-        https://github.com/solana-program/rewards \
-        --program-id REWArDioXgQJ2fZKkfu9LCLjQfRwYWVVfsvcsR5hoXi \
+        https://github.com/sendaifun/merkle-rewards \
+        --program-id T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi \
         --library-name rewards_program \
         --mount-path program \
         --remote \
