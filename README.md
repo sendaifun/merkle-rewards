@@ -10,12 +10,14 @@ Each week is an independent, immutable Merkle distribution. SendAI computes user
 T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi
 ```
 
-The program has not been deployed yet. Record each deployment here before exposing claims to users.
+The program is deployed on devnet. Mainnet deployment is pending.
 
-| Network | Program ID                                    | Status  |
-| ------- | --------------------------------------------- | ------- |
-| Devnet  | `T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi` | Pending |
-| Mainnet | `T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi` | Pending |
+| Network | Program ID                                                                                                                                      | Status                |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| Devnet  | [`T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi`](https://explorer.solana.com/address/T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi?cluster=devnet) | Deployed (2026-07-17) |
+| Mainnet | `T4RpCJXznFSw9atB4mmmDbZjUeDrxXDMUjV3qxEsuzi`                                                                                                   | Pending               |
+
+The deployed devnet binary matches the local build byte-for-byte with SHA-256 `f1854600c3d91bd42cf5c69f808846fd807402711b2e7dc249b6ab130518d07d`.
 
 ## Weekly lifecycle
 
