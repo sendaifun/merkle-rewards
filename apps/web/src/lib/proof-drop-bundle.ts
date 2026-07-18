@@ -34,6 +34,16 @@ export interface ProofDropBundle {
     readonly version: 1;
 }
 
+export interface ProofDropCampaignArtifact extends ProofDropBundle {
+    readonly clawbackTs: string;
+    readonly cluster: 'devnet';
+    readonly createSignature: string;
+    readonly createdAt: string;
+    readonly distribution: string;
+    readonly mint: string;
+    readonly programId: string;
+}
+
 export interface BuiltProofDropBundle {
     readonly bundle: ProofDropBundle;
     readonly merkleRoot: readonly number[];
@@ -230,7 +240,7 @@ export function parseProofDropRecipients(
         .filter(Boolean);
 
     for (const [index, line] of lines.entries()) {
-        if (index === 0 && /^recipient\s*[, \t]\s*amount$/i.test(line)) continue;
+        if (index === 0 && /^(recipient|wallet|address)\s*[, \t]\s*(amount|total_?amount)$/i.test(line)) continue;
 
         const parts = line.split(/[,\s]+/).filter(Boolean);
         if (parts.length !== 2) {

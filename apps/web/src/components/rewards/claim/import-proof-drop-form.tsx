@@ -5,6 +5,7 @@ import { Button } from '@solana/design-system';
 import { useSavedValues } from '@/contexts/SavedValuesContext';
 import type { ProofDropClaimDraft } from '@/hooks/use-proof-drop-claims';
 import { parseProofDropClaimBundle } from '@/lib/proof-drop-bundle';
+import { FileUploadField } from '../shared/file-upload-field';
 import { TextAreaField } from '../shared/reward-form-fields';
 
 interface ImportProofDropFormProps {
@@ -15,7 +16,21 @@ export function ImportProofDropForm({ onImport }: ImportProofDropFormProps) {
     const { account } = useWallet();
     const { rememberDistribution } = useSavedValues();
     const [bundle, setBundle] = useState('');
+    const [bundleFileName, setBundleFileName] = useState('');
     const [formError, setFormError] = useState<string | null>(null);
+
+    const handleBundleFile = async (file: File) => {
+        setFormError(null);
+        try {
+            const contents = await file.text();
+            setBundle(contents);
+            setBundleFileName(file.name);
+        } catch {
+            setBundle('');
+            setBundleFileName('');
+            setFormError('Could not read the campaign JSON.');
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,10 +58,21 @@ export function ImportProofDropForm({ onImport }: ImportProofDropFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <FileUploadField
+                accept=".json,application/json"
+                buttonLabel="Choose campaign JSON"
+                fileName={bundleFileName}
+                hint="Use the artifact downloaded after campaign creation. It is verified again before import."
+                label="Campaign File"
+                onFile={handleBundleFile}
+            />
             <TextAreaField
                 label="Recipient Proof Bundle"
                 value={bundle}
-                onChange={setBundle}
+                onChange={value => {
+                    setBundle(value);
+                    setBundleFileName('');
+                }}
                 placeholder='{"kind":"proof-drop","distribution":"...","recipients":[...]}'
                 rows={10}
                 required

@@ -15,6 +15,7 @@ import {
     type RevokeMode,
     type VestingScheduleArgs,
 } from '@solana/rewards';
+import { getCreateAssociatedTokenIdempotentInstruction } from '@solana-program/token';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useWalletTransactionSignAndSend } from '@/components/solana/use-wallet-transaction-sign-and-send';
@@ -500,6 +501,14 @@ export function useRewardsMutations() {
             const distributionVault = deriveAta(distribution, mint, tokenProgram);
             const claimantTokenAccount = deriveAta(txSigner.address, mint, tokenProgram);
 
+            const createClaimantTokenAccountInstruction = getCreateAssociatedTokenIdempotentInstruction({
+                ata: claimantTokenAccount,
+                mint: asAddress(mint),
+                owner: txSigner.address,
+                payer: txSigner,
+                tokenProgram,
+            });
+
             const instruction = getClaimMerkleInstruction(
                 {
                     amount: input.amount,
@@ -521,12 +530,17 @@ export function useRewardsMutations() {
                 { programAddress },
             );
 
-            const signature = await sendRewardTransaction([instruction], txSigner, 'Claim Merkle', {
-                amount: String(input.amount),
-                distribution,
-                mint,
-                totalAmount: String(input.totalAmount),
-            });
+            const signature = await sendRewardTransaction(
+                [createClaimantTokenAccountInstruction, instruction],
+                txSigner,
+                'Claim Merkle',
+                {
+                    amount: String(input.amount),
+                    distribution,
+                    mint,
+                    totalAmount: String(input.totalAmount),
+                },
+            );
             return { signature };
         },
         onError,

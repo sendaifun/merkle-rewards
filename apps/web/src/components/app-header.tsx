@@ -22,6 +22,15 @@ import { WalletButton } from './solana/solana-provider';
 function ClusterButton() {
     const { cluster, clusters, setCluster } = useCluster();
 
+    if (clusters.length === 1) {
+        return (
+            <span className="inline-flex h-8 items-center gap-2 rounded-full border bg-card px-3 text-sm font-medium text-foreground">
+                <Settings2 className="h-4 w-4" />
+                {cluster?.label ?? 'Devnet'}
+            </span>
+        );
+    }
+
     async function selectCluster(id: SolanaClusterId) {
         localStorage.setItem('rewards-cluster', id);
         await setCluster(id);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@solana/design-system';
+import { Download } from 'lucide-react';
 import { useSavedValues } from '@/contexts/SavedValuesContext';
 import { useRewardsMutations } from '@/hooks/use-rewards-mutations';
 import { useTokenFormDefaults } from '@/hooks/use-token-form-defaults';
@@ -8,7 +9,9 @@ import {
     parseProofDropRecipients,
     proofDropBundleText,
     type BuiltProofDropBundle,
+    type ProofDropCampaignArtifact,
 } from '@/lib/proof-drop-bundle';
+import { getProgramAddress } from '@/lib/program';
 import {
     firstValidationError,
     parseBigIntValue,
@@ -19,6 +22,7 @@ import {
 } from '@/lib/validation';
 import { INITIAL_VESTING_SCHEDULE, type VestingScheduleState } from '@/lib/vesting-schedule';
 import { TxResult } from '@/components/TxResult';
+import { FileUploadField } from '../shared/file-upload-field';
 import { FormField, SelectField, SendButton, TextAreaField, VestingScheduleField } from '../shared/reward-form-fields';
 
 const DAY_SECONDS = 86_400;
@@ -39,6 +43,15 @@ type ProofDropTemplate = {
 
 function timestampDaysFromNow(days: number) {
     return String(Math.floor(Date.now() / 1000) + days * DAY_SECONDS);
+}
+
+function downloadCampaignArtifact(fileName: string, contents: string) {
+    const url = URL.createObjectURL(new Blob([contents], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
 }
 
 const PROOF_DROP_TEMPLATES: readonly ProofDropTemplate[] = [
@@ -86,6 +99,7 @@ export function CreateMerkleDropForm() {
     const [amount, setAmount] = useState('');
     const [clawbackTs, setClawbackTs] = useState('0');
     const [recipients, setRecipients] = useState('');
+    const [allocationFileName, setAllocationFileName] = useState('');
     const [schedule, setSchedule] = useState<VestingScheduleState>(INITIAL_VESTING_SCHEDULE);
     const [builtBundle, setBuiltBundle] = useState<BuiltProofDropBundle | null>(null);
     const [generatedSeed, setGeneratedSeed] = useState('');
@@ -122,6 +136,13 @@ export function CreateMerkleDropForm() {
             return;
         }
 
+        if (parseBigIntValue(amount) !== bundleResult.value.totalAmount) {
+            setFormError(
+                `Initial funded amount must exactly match the ${bundleResult.value.totalAmount.toString()} total allocation.`,
+            );
+            return;
+        }
+
         const result = await createMerkleDistribution
             .mutateAsync({
                 amount: parseBigIntValue(amount),
@@ -143,11 +164,20 @@ export function CreateMerkleDropForm() {
         setGeneratedSeed(result.seed);
         setGeneratedDistribution(result.distribution);
         setBuiltBundle(bundleWithDistribution.ok ? bundleWithDistribution.value : bundleResult.value);
-        setGeneratedBundleText(
-            proofDropBundleText(
-                bundleWithDistribution.ok ? bundleWithDistribution.value.bundle : bundleResult.value.bundle,
-            ),
-        );
+        const completedBundle = bundleWithDistribution.ok
+            ? bundleWithDistribution.value.bundle
+            : { ...bundleResult.value.bundle, distribution: result.distribution, mint: result.mint };
+        const artifact: ProofDropCampaignArtifact = {
+            ...completedBundle,
+            clawbackTs,
+            cluster: 'devnet',
+            createSignature: result.signature,
+            createdAt: new Date().toISOString(),
+            distribution: result.distribution,
+            mint: result.mint,
+            programId: getProgramAddress(),
+        };
+        setGeneratedBundleText(proofDropBundleText(artifact));
         rememberDistribution(result.distribution);
         rememberMint(result.mint);
     };
@@ -173,12 +203,45 @@ export function CreateMerkleDropForm() {
         setBuiltBundle(bundleResult.value);
     };
 
+    const handleAllocationFile = async (file: File) => {
+        setFormError(null);
+        setGeneratedBundleText('');
+        setGeneratedDistribution('');
+        setGeneratedSeed('');
+
+        try {
+            const contents = await file.text();
+            const recipientResult = parseProofDropRecipients(contents, schedule);
+            if (!recipientResult.ok) {
+                setBuiltBundle(null);
+                setFormError(recipientResult.error);
+                return;
+            }
+
+            const bundleResult = buildProofDropBundle({ mint, recipients: recipientResult.value });
+            if (!bundleResult.ok) {
+                setBuiltBundle(null);
+                setFormError(bundleResult.error);
+                return;
+            }
+
+            setAllocationFileName(file.name);
+            setRecipients(contents);
+            setAmount(bundleResult.value.totalAmount.toString());
+            setBuiltBundle(bundleResult.value);
+        } catch {
+            setBuiltBundle(null);
+            setFormError('Could not read the allocation CSV.');
+        }
+    };
+
     const applyTemplate = (template: ProofDropTemplate) => {
         setAmount(template.amount);
         setClawbackTs(timestampDaysFromNow(template.clawbackDays));
         setGeneratedBundleText('');
         setGeneratedDistribution('');
         setGeneratedSeed('');
+        setAllocationFileName('');
         setRecipients(template.recipients);
         setRevocable(template.revocable);
         setSchedule(template.schedule());
@@ -235,10 +298,23 @@ export function CreateMerkleDropForm() {
                 placeholder="Unix timestamp"
                 required
             />
+            <FileUploadField
+                accept=".csv,text/csv"
+                buttonLabel="Choose allocation CSV"
+                fileName={allocationFileName}
+                hint="CSV columns: recipient,amount. Amounts are token base units."
+                label="Allocation File"
+                onFile={handleAllocationFile}
+            />
             <TextAreaField
                 label="Recipient Allocations"
                 value={recipients}
-                onChange={setRecipients}
+                onChange={value => {
+                    setRecipients(value);
+                    setAllocationFileName('');
+                    setBuiltBundle(null);
+                    setGeneratedBundleText('');
+                }}
                 placeholder={`recipient,amount\n7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgS5U,1000`}
                 hint="CSV lines or JSON recipients array"
                 required
@@ -249,7 +325,11 @@ export function CreateMerkleDropForm() {
                 Generate Preview
             </Button>
             {builtBundle && (
-                <div className="grid gap-3 rounded-lg border bg-background p-3 text-sm">
+                <div className="grid gap-3 rounded-lg border bg-background p-4 text-sm sm:grid-cols-2">
+                    <div className="grid gap-1">
+                        <span className="text-xs text-muted-foreground">Allocation File</span>
+                        <span className="truncate font-semibold">{allocationFileName || 'Manual entry'}</span>
+                    </div>
                     <div className="grid gap-1">
                         <span className="text-xs text-muted-foreground">Recipients</span>
                         <span className="font-semibold">{builtBundle.recipientCount}</span>
@@ -259,6 +339,18 @@ export function CreateMerkleDropForm() {
                         <span className="font-semibold">{builtBundle.totalAmount.toString()}</span>
                     </div>
                     <div className="grid gap-1">
+                        <span className="text-xs text-muted-foreground">Funding Check</span>
+                        <span
+                            className={
+                                amount === builtBundle.totalAmount.toString() ? 'font-semibold' : 'text-amber-700'
+                            }
+                        >
+                            {amount === builtBundle.totalAmount.toString()
+                                ? 'Matches allocation'
+                                : `Set funding to ${builtBundle.totalAmount.toString()}`}
+                        </span>
+                    </div>
+                    <div className="grid gap-1 sm:col-span-2">
                         <span className="text-xs text-muted-foreground">Generated Root</span>
                         <span className="break-all font-mono text-xs">0x{builtBundle.merkleRootHex}</span>
                     </div>
@@ -283,13 +375,34 @@ export function CreateMerkleDropForm() {
                 <FormField label="Generated Drop Address" value={generatedDistribution} onChange={() => {}} readOnly />
             )}
             {generatedBundleText && (
-                <TextAreaField
-                    label="Recipient Proof Bundle"
-                    value={generatedBundleText}
-                    onChange={() => {}}
-                    readOnly
-                    rows={10}
-                />
+                <div className="grid gap-3 rounded-lg border bg-background p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p className="text-sm font-semibold">Campaign artifact ready</p>
+                            <p className="text-xs text-muted-foreground">
+                                Share this JSON with claimants. It contains the verified proofs for this campaign.
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            iconLeft={<Download />}
+                            onClick={() =>
+                                downloadCampaignArtifact(`campaign-${generatedDistribution}.json`, generatedBundleText)
+                            }
+                        >
+                            Download JSON
+                        </Button>
+                    </div>
+                    <TextAreaField
+                        label="Recipient Proof Bundle"
+                        value={generatedBundleText}
+                        onChange={() => {}}
+                        readOnly
+                        rows={10}
+                    />
+                </div>
             )}
             <SendButton sending={createMerkleDistribution.isPending} />
             <TxResult

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 type CreateFlow = 'proof-drop' | 'recipient-list';
 
 export function CreateRewards() {
-    const [flow, setFlow] = useState<CreateFlow>('recipient-list');
+    const [flow, setFlow] = useState<CreateFlow>('proof-drop');
 
     return (
         <div className="space-y-6">

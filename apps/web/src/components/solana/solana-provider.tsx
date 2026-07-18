@@ -27,10 +27,15 @@ import { ellipsify } from '@/lib/utils';
 const viteEnv = import.meta.env as unknown as {
     readonly DEV?: boolean;
     readonly VITE_DEFAULT_CLUSTER?: string;
+    readonly VITE_DEVNET_RPC_URL?: string;
+    readonly VITE_LOCK_DEVNET?: string;
     readonly VITE_MAINNET_RPC_URL?: string;
 };
 
+export const DEVNET_LOCKED = viteEnv.VITE_LOCK_DEVNET !== 'false';
+
 function defaultClusterId(): SolanaClusterId {
+    if (DEVNET_LOCKED) return 'solana:devnet';
     const stored = localStorage.getItem('rewards-cluster');
     const configured = viteEnv.VITE_DEFAULT_CLUSTER;
     const id = stored || configured || (viteEnv.DEV ? 'solana:localnet' : 'solana:devnet');
@@ -46,16 +51,24 @@ function networkFromClusterId(clusterId: SolanaClusterId): 'devnet' | 'localnet'
     return 'localnet';
 }
 
-const clusters = [
-    ...(viteEnv.DEV ? [{ id: 'solana:localnet' as const, label: 'Localnet', url: '/rpc' }] : []),
-    { id: 'solana:devnet' as const, label: 'Devnet', url: 'https://api.devnet.solana.com' },
-    { id: 'solana:testnet' as const, label: 'Testnet', url: 'https://api.testnet.solana.com' },
-    {
-        id: 'solana:mainnet' as const,
-        label: 'Mainnet',
-        url: viteEnv.VITE_MAINNET_RPC_URL ?? 'https://api.mainnet-beta.solana.com',
-    },
-];
+const devnetCluster = {
+    id: 'solana:devnet' as const,
+    label: 'Devnet',
+    url: viteEnv.VITE_DEVNET_RPC_URL ?? 'https://api.devnet.solana.com',
+};
+
+const clusters = DEVNET_LOCKED
+    ? [devnetCluster]
+    : [
+          ...(viteEnv.DEV ? [{ id: 'solana:localnet' as const, label: 'Localnet', url: '/rpc' }] : []),
+          devnetCluster,
+          { id: 'solana:testnet' as const, label: 'Testnet', url: 'https://api.testnet.solana.com' },
+          {
+              id: 'solana:mainnet' as const,
+              label: 'Mainnet',
+              url: viteEnv.VITE_MAINNET_RPC_URL ?? 'https://api.mainnet-beta.solana.com',
+          },
+      ];
 
 export function WalletButton() {
     const { account, isConnected, isConnecting } = useWallet();
